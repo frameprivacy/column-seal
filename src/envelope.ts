@@ -44,7 +44,7 @@ export interface Seal {
   decrypt(envelope: Uint8Array, aad: string): string;
   /** Decrypts an envelope to raw bytes. */
   decryptBytes(envelope: Uint8Array, aad: string): Buffer;
-  /** `JSON.stringify` then {@link Seal.encrypt}. */
+  /** `JSON.stringify` then {@link Seal.encrypt}. Throws a `TypeError` for values JSON cannot represent (`undefined`). */
   encryptJson(value: unknown, aad: string): Buffer;
   /** {@link Seal.decrypt} then `JSON.parse`. Returns `unknown`: validate the shape at the call site. */
   decryptJson(envelope: Uint8Array, aad: string): unknown;
@@ -182,7 +182,12 @@ export function createSeal(options: SealOptions): Seal {
     encrypt,
     decrypt,
     decryptBytes,
-    encryptJson: (value: unknown, context: string) => encrypt(JSON.stringify(value), context),
+    encryptJson: (value: unknown, context: string) => {
+      // JSON.stringify returns undefined (not a string) for undefined, functions and symbols.
+      const json = JSON.stringify(value) as string | undefined;
+      if (json === undefined) throw new TypeError("encryptJson: value is not JSON-serializable");
+      return encrypt(json, context);
+    },
     decryptJson: (envelope: Uint8Array, context: string): unknown => JSON.parse(decrypt(envelope, context)),
     needsRotation,
     rotate: (envelope: Uint8Array, context: string) =>

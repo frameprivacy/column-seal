@@ -65,6 +65,14 @@ describe("encrypt / decrypt", () => {
     expect(seal.decryptJson(seal.encryptJson(value, ctx), ctx)).toEqual(value);
   });
 
+  it("encryptJson explains values JSON cannot represent (#10)", () => {
+    for (const value of [undefined, () => 1, Symbol("s")]) {
+      expect(() => seal.encryptJson(value, ctx)).toThrow("encryptJson: value is not JSON-serializable");
+    }
+    expect(seal.decryptJson(seal.encryptJson(null, ctx), ctx)).toBeNull();
+    expect(seal.decryptJson(seal.encryptJson([undefined], ctx), ctx)).toEqual([null]);
+  });
+
   it("uses a fresh IV for every call", () => {
     expect(seal.encrypt("same", ctx).equals(seal.encrypt("same", ctx))).toBe(false);
   });
