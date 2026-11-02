@@ -195,6 +195,19 @@ describe("keyrings", () => {
     expect(ring.keys.get(1)?.equals(k1)).toBe(true);
   });
 
+  it("keeps each key in its own allocation, outside Node's shared Buffer pool (#5)", () => {
+    const fromString = createKeyring({ keys: { 1: k1.toString("base64") }, active: 1 }).keys.get(1);
+    const fromBytes = createKeyring({ keys: { 1: new Uint8Array(k2) }, active: 1 }).keys.get(1);
+    for (const key of [fromString, fromBytes]) {
+      expect(key?.byteOffset).toBe(0);
+      expect(key?.buffer.byteLength).toBe(32);
+    }
+    expect(fromString?.equals(k1)).toBe(true);
+    expect(fromBytes?.equals(k2)).toBe(true);
+    const seal = createSeal({ encryption: createKeyring({ keys: { 1: k1 }, active: 1 }) });
+    expect(seal.decrypt(seal.encrypt("ok", ctx), ctx)).toBe("ok");
+  });
+
   it("validates sizes, versions and the active key", () => {
     expect(() => createKeyring({ keys: { 1: randomBytes(16) }, active: 1, name: "APP_KEYS" })).toThrow(
       "APP_KEYS: key 1 must be 32 bytes",

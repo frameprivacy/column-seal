@@ -39,10 +39,23 @@ class ReadonlyKeyMap extends Map<number, Buffer> {
   }
 }
 
+/**
+ * Copies key material into its own `Buffer.alloc` allocation. `Buffer.from` serves small sizes from Node's shared
+ * 8 KiB pool, which would put key bytes in the same memory as unrelated Buffers.
+ */
 function toKey(material: KeyMaterial, version: number, name: string): Buffer {
-  const key = typeof material === "string" ? Buffer.from(material, "base64") : Buffer.from(material);
-  if (key.length !== KEY_BYTES) throw new Error(`${name}: key ${String(version)} must be ${String(KEY_BYTES)} bytes`);
-  return key;
+  const bytes = typeof material === "string" ? Buffer.from(material, "base64") : material;
+  try {
+    if (bytes.length !== KEY_BYTES) {
+      throw new Error(`${name}: key ${String(version)} must be ${String(KEY_BYTES)} bytes`);
+    }
+    const key = Buffer.alloc(KEY_BYTES);
+    key.set(bytes);
+    return key;
+  } finally {
+    // The decoded temporary lives in the shared pool: wipe it. Caller-owned bytes are left alone.
+    if (typeof material === "string") bytes.fill(0);
+  }
 }
 
 function checkVersion(version: unknown, name: string): number {
