@@ -29,6 +29,9 @@ ciphertext written by an earlier version still decrypts.
 - `canonicalPhone` (and `normalizeIdentifier("phone", ...)`) throws `"not a phone number"` for input with no digits.
   `""`, `"abc"` and `"n/a"` all used to become `"+1"` (and `"+"` stayed `"+"`), so unrelated invalid input shared one
   lookup hash (#12). Numbers with digits canonicalize exactly as before.
+- `domainHostname` rejects schemes other than http(s) (`ftp://example.com` used to return `"ftp"`), drops one trailing
+  dot so `example.com.` matches `example.com`, and turns URL parse failures into `Error("not a domain")` without the
+  raw input that Node's `ERR_INVALID_URL` carried (#13).
 
 ### Changed
 

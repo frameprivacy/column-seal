@@ -29,18 +29,30 @@ export function canonicalPhone(raw: string): string {
 }
 
 /**
- * Lower-cased hostname for a domain typed as `example.com`, `https://Example.com/path`, etc.
+ * Lower-cased hostname for a domain typed as `example.com`, `https://Example.com/path`, etc. One trailing dot is
+ * dropped, so `example.com.` and `example.com` match.
  *
- * @throws If the input is empty, contains whitespace, or contains `@` (an email address is not a domain, and
- * `http://user@host` must not silently become `host`).
+ * @throws `Error("not a domain")` if the input is empty, contains whitespace or `@` (an email address is not a domain,
+ * and `http://user@host` must not silently become `host`), uses a scheme other than http(s), or is not a valid host.
+ * The error never includes the input.
  */
 export function domainHostname(raw: string): string {
-  const bare = raw
-    .trim()
-    .toLowerCase()
-    .replace(/^https?:\/\//, "");
+  const lowered = raw.trim().toLowerCase();
+  const scheme = /^([a-z][a-z0-9+.-]*):\/\//.exec(lowered)?.[1];
+  // "ftp://example.com" used to parse as host "ftp".
+  if (scheme !== undefined && scheme !== "http" && scheme !== "https") throw new Error("not a domain");
+  const bare = lowered.replace(/^https?:\/\//, "");
   if (!bare || bare.includes("@") || /\s/.test(bare)) throw new Error("not a domain");
-  return new URL(`http://${bare}`).hostname;
+  let host: string;
+  try {
+    host = new URL(`http://${bare}`).hostname;
+  } catch {
+    // Node's ERR_INVALID_URL carries the raw input; do not let it reach logs.
+    throw new Error("not a domain");
+  }
+  if (host.endsWith(".")) host = host.slice(0, -1);
+  if (!host) throw new Error("not a domain");
+  return host;
 }
 
 /**
