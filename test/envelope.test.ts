@@ -208,6 +208,36 @@ describe("keyrings", () => {
     expect(seal.decrypt(seal.encrypt("ok", ctx), ctx)).toBe("ok");
   });
 
+  it("decodes key strings strictly (#6)", () => {
+    const b64 = k1.toString("base64");
+    expect(
+      createKeyring({ keys: { 1: ` ${b64}\n` }, active: 1 })
+        .keys.get(1)
+        ?.equals(k1),
+    ).toBe(true);
+    const bad = [
+      "correct-horse-battery-staple-is-a-passphrase".slice(0, 43), // decoded to 32 bytes before
+      `${b64}garbage`,
+      `${b64.slice(0, 20)} !! ${b64.slice(20)}`,
+      `${b64.slice(0, 43)}!`,
+      k1.toString("hex"),
+      k1.toString("base64url"), // never documented, and a 43-character passphrase looks just like it
+      `${"A".repeat(42)}B=`, // non-canonical: decodes to the same bytes as "AAA...A="
+      randomBytes(16).toString("base64"),
+    ];
+    for (const value of bad) {
+      let message = "";
+      try {
+        createKeyring({ keys: { 1: value }, active: 1, name: "K" });
+      } catch (e) {
+        message = String(e);
+      }
+      expect(message).toContain("K: key 1 must be 32 bytes of padded base64");
+      expect(message).not.toContain(value.trim());
+    }
+    expect(() => parseKeyring(`1:${b64}junk`, "1", "APP_ENC_KEYS")).toThrow(/APP_ENC_KEYS: key 1 must be 32 bytes/);
+  });
+
   it("validates sizes, versions and the active key", () => {
     expect(() => createKeyring({ keys: { 1: randomBytes(16) }, active: 1, name: "APP_KEYS" })).toThrow(
       "APP_KEYS: key 1 must be 32 bytes",

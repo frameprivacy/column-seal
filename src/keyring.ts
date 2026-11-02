@@ -6,7 +6,10 @@ export interface Keyring {
   readonly keys: ReadonlyMap<number, Buffer>;
 }
 
-/** Key material: raw bytes, or a base64 string that decodes to 32 bytes. */
+/**
+ * Key material: raw bytes, or exactly 32 bytes as canonical padded base64 (44 characters ending in `=`, as produced by
+ * `randomBytes(32).toString("base64")`). Surrounding whitespace is ignored; anything else is rejected.
+ */
 export type KeyMaterial = Uint8Array | string;
 
 /** Options for {@link createKeyring}. */
@@ -39,12 +42,30 @@ class ReadonlyKeyMap extends Map<number, Buffer> {
   }
 }
 
+/** Padded base64 for exactly 32 bytes: 43 characters and one `=`. */
+const BASE64_KEY = /^[A-Za-z0-9+/]{43}=$/;
+
+/**
+ * Strict base64 decoding. `Buffer.from(s, "base64")` skips unknown characters, also accepts base64url and stops at the
+ * first `=`, so a passphrase or a mangled value could otherwise be accepted as a key. Only canonical padded base64
+ * (what `randomBytes(32).toString("base64")` produces) is accepted.
+ */
+function decodeKey(material: string, version: number, name: string): Buffer {
+  const text = material.trim();
+  const bytes = BASE64_KEY.test(text) ? Buffer.from(text, "base64") : undefined;
+  if (bytes?.toString("base64") !== text) {
+    bytes?.fill(0);
+    throw new Error(`${name}: key ${String(version)} must be ${String(KEY_BYTES)} bytes of padded base64`);
+  }
+  return bytes;
+}
+
 /**
  * Copies key material into its own `Buffer.alloc` allocation. `Buffer.from` serves small sizes from Node's shared
  * 8 KiB pool, which would put key bytes in the same memory as unrelated Buffers.
  */
 function toKey(material: KeyMaterial, version: number, name: string): Buffer {
-  const bytes = typeof material === "string" ? Buffer.from(material, "base64") : material;
+  const bytes = typeof material === "string" ? decodeKey(material, version, name) : material;
   try {
     if (bytes.length !== KEY_BYTES) {
       throw new Error(`${name}: key ${String(version)} must be ${String(KEY_BYTES)} bytes`);

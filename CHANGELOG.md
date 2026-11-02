@@ -15,3 +15,11 @@ ciphertext written by an earlier version still decrypts.
   keyring fails at construction and later changes to the input keyring have no effect (#4).
 - Key bytes are copied into dedicated allocations instead of Node's shared `Buffer` pool, and the temporary decoded
   from a base64 string is wiped (#5).
+
+### Changed
+
+- Key strings are decoded strictly: they must be exactly 32 bytes as canonical padded base64 (44 characters ending in
+  `=`, as `randomBytes(32).toString("base64")` produces), with surrounding whitespace ignored. Previously invalid
+  characters were skipped, trailing data was ignored and base64url was accepted, so a 43-character passphrase or a
+  mangled value could load as a key (#6). Keys generated as the README shows are unaffected. To migrate a base64url
+  key, re-encode the same bytes: `Buffer.from(key, "base64url").toString("base64")`.
