@@ -24,6 +24,8 @@ ciphertext written by an earlier version still decrypts.
   same (#9).
 - `decrypt` decodes strictly and throws when the plaintext is not valid UTF-8 (for example bytes written with
   `encrypt(bytes)`), instead of returning replacement characters. `decryptBytes` is unchanged (#9).
+- `encryptJson` throws `TypeError("encryptJson: value is not JSON-serializable")` for `undefined`, functions and
+  symbols, instead of an unrelated internal `ERR_INVALID_ARG_TYPE` from `node:crypto` (#10).
 
 ### Changed
 
