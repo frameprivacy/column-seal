@@ -126,15 +126,15 @@ const candidates = seal.lookupHashes("contacts:email", key); // active version f
 
 ### Helpers
 
-| Function                                                  | Description                                                                                                                                 |
-| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `aad(table, column, owner)`                               | `"<table>.<column>:<owner>"`. Throws if `table` is empty or has `.`/`:`, or `column` is empty or has `:`, so contexts never collide.        |
-| `keyVersionOf(envelope)`                                  | Reads the key version from the header without decrypting.                                                                                   |
-| `normalizeIdentifier(kind, raw, options?)`                | Canonical form for `email`, `phone`, `username`, `domain`, `name`, `address`, `birthdate`. Override `phone` / `domain` rules via `options`. |
-| `lookupKey(kind, normalized)`                             | Folds case for free-text kinds before hashing.                                                                                              |
-| `maskIdentifier(kind, normalized)`                        | Display hint, e.g. `"+1 (604) •••-••12"`.                                                                                                   |
-| `canonicalPhone(raw)` / `domainHostname(raw)`             | The default phone and domain rules.                                                                                                         |
-| `sha256(value)`, `randomToken(bytes?)`, `safeEqual(a, b)` | Token helpers: hash high-entropy secrets, mint URL-safe tokens (16 to 1024 bytes), compare in constant time.                                |
+| Function                                                  | Description                                                                                                                                                                                      |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `aad(table, column, owner)`                               | `"<table>.<column>:<owner>"`. Throws if `table` is empty or has `.`/`:`, or `column` is empty or has `:`, so contexts never collide.                                                             |
+| `keyVersionOf(envelope)`                                  | Reads the key version from the header without decrypting.                                                                                                                                        |
+| `normalizeIdentifier(kind, raw, options?)`                | Canonical form (Unicode NFC first) for `email`, `phone`, `username`, `domain`, `name`, `address`, `birthdate`. Override `phone` / `domain` rules via `options`; `nfc: false` keeps 0.1.0 hashes. |
+| `lookupKey(kind, normalized)`                             | Folds case for free-text kinds before hashing.                                                                                                                                                   |
+| `maskIdentifier(kind, normalized)`                        | Display hint, e.g. `"+1 (604) •••-••12"`.                                                                                                                                                        |
+| `canonicalPhone(raw)` / `domainHostname(raw)`             | The default phone and domain rules.                                                                                                                                                              |
+| `sha256(value)`, `randomToken(bytes?)`, `safeEqual(a, b)` | Token helpers: hash high-entropy secrets, mint URL-safe tokens (16 to 1024 bytes), compare in constant time.                                                                                     |
 
 ### Envelope format
 

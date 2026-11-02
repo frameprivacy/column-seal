@@ -7,6 +7,12 @@ export interface NormalizeOptions {
   readonly phone?: (raw: string) => string;
   /** Domain canonicalizer. Default: {@link domainHostname}. */
   readonly domain?: (raw: string) => string;
+  /**
+   * Apply Unicode NFC before the kind-specific rules. Default: `true`. Set `false` only to stay hash-compatible with
+   * lookup hashes written by code that never normalized (column-seal 0.1.0, or the code it was extracted from) until
+   * those rows are re-hashed. ASCII and already-NFC input gives the same result either way.
+   */
+  readonly nfc?: boolean;
 }
 
 /**
@@ -58,6 +64,9 @@ export function domainHostname(raw: string): string {
 /**
  * Canonical form to use before hashing, so `" Alex.Morgan@Mail.com"` and `"alex.morgan@mail.com"` dedupe.
  *
+ * Every kind is first put in Unicode NFC (unless `options.nfc` is `false`), so the same visible text typed with
+ * precomposed or combining accents dedupes.
+ *
  * - `email`: trimmed, lower-cased
  * - `phone`: {@link canonicalPhone} (or your override)
  * - `username`: leading `@` dropped, lower-cased
@@ -66,7 +75,8 @@ export function domainHostname(raw: string): string {
  * - `birthdate`: trimmed only (validate the format yourself)
  */
 export function normalizeIdentifier(kind: IdentifierKind, raw: string, options: NormalizeOptions = {}): string {
-  const v = raw.trim();
+  // NFC first, so a precomposed "é" and "e" + combining accent produce the same canonical form (and hash).
+  const v = (options.nfc === false ? raw : raw.normalize("NFC")).trim();
   switch (kind) {
     case "email":
       return v.toLowerCase();

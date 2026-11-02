@@ -45,3 +45,9 @@ ciphertext written by an earlier version still decrypts.
   key, re-encode the same bytes: `Buffer.from(key, "base64url").toString("base64")`.
 - `randomToken(bytes)` requires an integer from 16 (128 bits) to 1024 and throws a `RangeError` otherwise.
   `randomToken(0)` used to return an empty string. The default (32) is unchanged (#11).
+- **Behaviour change:** `normalizeIdentifier` applies Unicode NFC before the kind-specific rules, so the same text typed with precomposed or
+  combining accents (common on macOS, and for French names) dedupes (#15). ASCII and already-NFC input normalize
+  exactly as before. Migration: a lookup hash stored from decomposed (NFD) input under an earlier version will no
+  longer match. If that matters for your data, decrypt those rows, re-run `normalizeIdentifier` and rewrite the hash
+  (for example in the same background job you use for key rotation). Until then, pass `{ nfc: false }` to
+  `normalizeIdentifier` to keep the old, un-normalized behaviour and stay hash-compatible with existing rows.

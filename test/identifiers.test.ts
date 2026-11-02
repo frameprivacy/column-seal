@@ -68,6 +68,26 @@ describe("normalizeIdentifier", () => {
     expect(normalizeIdentifier("birthdate", " 1990-01-02 ")).toBe("1990-01-02");
   });
 
+  it("applies Unicode NFC so precomposed and combining accents dedupe (#15)", () => {
+    const composed = "Jos\u00e9 Côté";
+    const decomposed = composed.normalize("NFD");
+    expect(decomposed).not.toBe(composed);
+    expect(normalizeIdentifier("name", decomposed)).toBe(composed);
+    expect(lookupKey("name", normalizeIdentifier("name", decomposed))).toBe(lookupKey("name", composed));
+    expect(normalizeIdentifier("email", "Jose\u0301@Example.com")).toBe("jos\u00e9@example.com");
+    expect(normalizeIdentifier("username", "@Rene\u0301")).toBe("ren\u00e9");
+    expect(normalizeIdentifier("address", "1 Rue Ame\u0301lie")).toBe("1 Rue Am\u00e9lie");
+    expect(normalizeIdentifier("email", "ada@example.com")).toBe("ada@example.com");
+  });
+
+  it("keeps the pre-NFC behaviour with nfc: false, for hash compatibility (#15)", () => {
+    const decomposed = "Jose\u0301 Co\u0302te\u0301";
+    expect(normalizeIdentifier("name", decomposed, { nfc: false })).toBe(decomposed);
+    expect(normalizeIdentifier("email", " Jose\u0301@Example.com ", { nfc: false })).toBe("jose\u0301@example.com");
+    expect(normalizeIdentifier("name", " Ada  Lovelace ", { nfc: false })).toBe("Ada Lovelace");
+    expect(normalizeIdentifier("name", decomposed, { nfc: true })).toBe(decomposed.normalize("NFC"));
+  });
+
   it("allows overriding the phone and domain rules", () => {
     const opts = { phone: (s: string) => `tel:${s}`, domain: (s: string) => s.toUpperCase() };
     expect(normalizeIdentifier("phone", " 123 ", opts)).toBe("tel:123");
