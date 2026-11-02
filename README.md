@@ -41,7 +41,14 @@ Requires Node.js 22 or newer. ESM only.
 ## Usage
 
 ```ts
-import { aad, createKeyring, createSeal, lookupKey, maskIdentifier, normalizeIdentifier } from "@frame-labs/column-seal";
+import {
+  aad,
+  createKeyring,
+  createSeal,
+  lookupKey,
+  maskIdentifier,
+  normalizeIdentifier,
+} from "@frame-labs/column-seal";
 
 // Keys come from your environment or KMS as base64-encoded 32-byte values.
 const seal = createSeal({
