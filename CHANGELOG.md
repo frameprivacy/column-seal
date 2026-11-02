@@ -34,3 +34,5 @@ ciphertext written by an earlier version still decrypts.
   characters were skipped, trailing data was ignored and base64url was accepted, so a 43-character passphrase or a
   mangled value could load as a key (#6). Keys generated as the README shows are unaffected. To migrate a base64url
   key, re-encode the same bytes: `Buffer.from(key, "base64url").toString("base64")`.
+- `randomToken(bytes)` requires an integer from 16 (128 bits) to 1024 and throws a `RangeError` otherwise.
+  `randomToken(0)` used to return an empty string. The default (32) is unchanged (#11).

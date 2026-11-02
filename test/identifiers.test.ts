@@ -79,6 +79,13 @@ describe("tokens", () => {
     expect(randomToken()).not.toBe(t);
   });
 
+  it("refuses token sizes that would be empty or guessable (#11)", () => {
+    for (const bad of [0, 4, 15, 1.5, -1, Number.NaN, 1025]) {
+      expect(() => randomToken(bad)).toThrow(/bytes must be an integer from 16 to 1024/);
+    }
+    expect(randomToken(1024)).toHaveLength(1366);
+  });
+
   it("hashes with SHA-256", () => {
     expect(sha256("abc").toString("hex")).toBe("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
   });
