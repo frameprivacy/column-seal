@@ -112,17 +112,17 @@ const candidates = seal.lookupHashes("contacts:email", key); // active version f
 
 ### `createSeal({ encryption, hmac? })` → `Seal`
 
-| Member                                                   | Description                                                                  |
-| -------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `encrypt(plaintext, aad)`                                | String (UTF-8) or bytes → `Buffer` envelope, using the active key.           |
-| `decrypt(envelope, aad)`                                 | Envelope → string. Throws on unknown key, wrong AAD, or any tampering.       |
-| `decryptBytes(envelope, aad)`                            | Envelope → `Buffer`.                                                         |
-| `encryptJson(value, aad)` / `decryptJson(envelope, aad)` | JSON helpers. `decryptJson` returns `unknown`; validate it at the call site. |
-| `needsRotation(envelope)`                                | `true` if written with a non-active key.                                     |
-| `rotate(envelope, aad)`                                  | Re-encrypts with the active key (no-op copy if already current).             |
-| `lookupHash(domain, value, version?)`                    | HMAC-SHA256 of `domain NUL value`. Deterministic per key and domain.         |
-| `lookupHashes(domain, value)`                            | The hash under every loaded HMAC key, active first.                          |
-| `activeKeyVersion` / `activeHmacVersion`                 | Versions new writes use.                                                     |
+| Member                                                   | Description                                                                                                   |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `encrypt(plaintext, aad)`                                | String (UTF-8) or bytes → `Buffer` envelope, using the active key.                                            |
+| `decrypt(envelope, aad)`                                 | Envelope → string. Throws on unknown key, wrong AAD, or any tampering.                                        |
+| `decryptBytes(envelope, aad)`                            | Envelope → `Buffer`.                                                                                          |
+| `encryptJson(value, aad)` / `decryptJson(envelope, aad)` | JSON helpers. `decryptJson` returns `unknown`; validate it at the call site.                                  |
+| `needsRotation(envelope)`                                | `true` if written with a non-active key.                                                                      |
+| `rotate(envelope, aad)`                                  | Re-encrypts with the active key (no-op copy if already current).                                              |
+| `lookupHash(domain, value, version?)`                    | HMAC-SHA256 of `domain NUL value`. Deterministic per key and domain. `domain` must be non-empty, without NUL. |
+| `lookupHashes(domain, value)`                            | The hash under every loaded HMAC key, active first.                                                           |
+| `activeKeyVersion` / `activeHmacVersion`                 | Versions new writes use.                                                                                      |
 
 ### Helpers
 

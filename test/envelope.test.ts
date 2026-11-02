@@ -156,6 +156,14 @@ describe("lookup hashes (blind index)", () => {
     expect(seal.lookupHash("ab", "c").equals(seal.lookupHash("a", "bc"))).toBe(false);
   });
 
+  it("rejects domains that would break the NUL separation (#8)", () => {
+    // used to collide: "a\0b" + NUL + "c" and "a" + NUL + "b\0c" are the same bytes
+    expect(() => seal.lookupHash("a\u0000b", "c")).toThrow(/no NUL/);
+    expect(() => seal.lookupHash("", "c")).toThrow(/non-empty/);
+    expect(() => seal.lookupHashes("x\u0000", "c")).toThrow(/no NUL/);
+    expect(seal.lookupHash("a", "b\u0000c")).toHaveLength(32);
+  });
+
   it("depends on the key", () => {
     expect(seal.lookupHash("d", "v").equals(rotating.lookupHash("d", "v"))).toBe(false);
     expect(seal.lookupHash("d", "v").equals(rotating.lookupHash("d", "v", 1))).toBe(true);

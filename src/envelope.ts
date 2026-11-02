@@ -40,6 +40,8 @@ export interface Seal {
   /**
    * Keyed HMAC-SHA256 for equality search and dedupe on encrypted values ("blind index").
    * `domain` separates uses, so the same value hashes differently in different contexts. Normalize `value` first.
+   *
+   * @throws If `domain` is empty or contains a NUL character.
    */
   lookupHash(domain: string, value: string, version?: number): Buffer;
   /**
@@ -137,6 +139,8 @@ export function createSeal(options: SealOptions): Seal {
   const decrypt = (envelope: Uint8Array, context: string): string => decryptBytes(envelope, context).toString("utf8");
 
   const lookupHash = (domain: string, value: string, version?: number): Buffer => {
+    // The NUL separator only keeps (domain, value) pairs apart if the domain itself has no NUL.
+    if (!domain || domain.includes("\u0000")) throw new Error("lookup domain must be non-empty and contain no NUL");
     const ring = macRing();
     const key = keyFor(ring, version ?? ring.active, "hmac");
     return createHmac("sha256", key).update(`${domain}\u0000${value}`, "utf8").digest();
