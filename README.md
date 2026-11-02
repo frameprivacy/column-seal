@@ -134,7 +134,7 @@ const candidates = seal.lookupHashes("contacts:email", key); // active version f
 | `lookupKey(kind, normalized)`                             | Folds case for free-text kinds before hashing.                                                                                              |
 | `maskIdentifier(kind, normalized)`                        | Display hint, e.g. `"+1 (604) •••-••12"`.                                                                                                   |
 | `canonicalPhone(raw)` / `domainHostname(raw)`             | The default phone and domain rules.                                                                                                         |
-| `sha256(value)`, `randomToken(bytes?)`, `safeEqual(a, b)` | Token helpers: hash high-entropy secrets, mint URL-safe tokens, compare in constant time.                                                   |
+| `sha256(value)`, `randomToken(bytes?)`, `safeEqual(a, b)` | Token helpers: hash high-entropy secrets, mint URL-safe tokens (16 to 1024 bytes), compare in constant time.                                |
 
 ### Envelope format
 
