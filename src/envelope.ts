@@ -1,5 +1,5 @@
 import { createCipheriv, createDecipheriv, createHmac, randomBytes } from "node:crypto";
-import type { Keyring } from "./keyring.js";
+import { snapshotKeyring, type Keyring } from "./keyring.js";
 
 /** Format byte at offset 0 of every envelope. */
 export const FORMAT_VERSION = 0x01;
@@ -79,7 +79,8 @@ export function keyVersionOf(envelope: Uint8Array): number {
 }
 
 /**
- * Creates a {@link Seal}.
+ * Creates a {@link Seal}. Both keyrings are validated and copied, so a hand-built or later-modified keyring cannot
+ * change the keys a running `Seal` uses.
  *
  * Envelope layout (works well in a `bytea`/`BLOB` column):
  *
@@ -96,7 +97,9 @@ export function keyVersionOf(envelope: Uint8Array): number {
  * const blob = seal.encrypt("+15555550123", aad("contacts", "phone", userId));
  */
 export function createSeal(options: SealOptions): Seal {
-  const { encryption, hmac } = options;
+  // Validate and copy both keyrings now: a bad keyring fails here, and later changes to the inputs have no effect.
+  const encryption = snapshotKeyring(options.encryption, "encryption keyring");
+  const hmac = options.hmac === undefined ? undefined : snapshotKeyring(options.hmac, "hmac keyring");
 
   const keyFor = (ring: Keyring, version: number, what: string): Buffer => {
     const key = ring.keys.get(version);
