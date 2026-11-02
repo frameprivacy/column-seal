@@ -20,7 +20,16 @@ describe("normalizeIdentifier", () => {
     expect(canonicalPhone("1-604-555-0123")).toBe("+16045550123");
     expect(canonicalPhone("+44 20 7946 0958")).toBe("+442079460958");
     expect(canonicalPhone("0044207946095812")).toBe("+0044207946095812");
-    expect(canonicalPhone("+")).toBe("+");
+  });
+
+  it("refuses input with no digits instead of mapping it to a shared value (#12)", () => {
+    // "", "abc" and "n/a" all used to become "+1", and "+" stayed "+"
+    for (const bad of ["", "   ", "abc", "n/a", "+", "+ ( ) -"]) {
+      expect(() => canonicalPhone(bad)).toThrow("not a phone number");
+    }
+    expect(() => normalizeIdentifier("phone", "none")).toThrow("not a phone number");
+    expect(canonicalPhone("+1 604 555 0123")).toBe("+16045550123");
+    expect(canonicalPhone("555-0123")).toBe("+15550123"); // short numbers keep the simple +1 rule
   });
 
   it("strips @ from usernames", () => {

@@ -26,6 +26,9 @@ ciphertext written by an earlier version still decrypts.
   `encrypt(bytes)`), instead of returning replacement characters. `decryptBytes` is unchanged (#9).
 - `encryptJson` throws `TypeError("encryptJson: value is not JSON-serializable")` for `undefined`, functions and
   symbols, instead of an unrelated internal `ERR_INVALID_ARG_TYPE` from `node:crypto` (#10).
+- `canonicalPhone` (and `normalizeIdentifier("phone", ...)`) throws `"not a phone number"` for input with no digits.
+  `""`, `"abc"` and `"n/a"` all used to become `"+1"` (and `"+"` stayed `"+"`), so unrelated invalid input shared one
+  lookup hash (#12). Numbers with digits canonicalize exactly as before.
 
 ### Changed
 
