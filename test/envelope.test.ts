@@ -10,6 +10,18 @@ const ctx = aad("contacts", "email", "user-1");
 describe("aad", () => {
   it("binds table, column and owner", () => {
     expect(aad("t", "c", "o")).toBe("t.c:o");
+    expect(aad("contacts", "email.v2", "org:1:user")).toBe("contacts.email.v2:org:1:user");
+  });
+
+  it("rejects names that would make the context ambiguous (#3)", () => {
+    // these pairs used to collide: "a.b.c:o" and "t.c:1:x"
+    expect(() => aad("a.b", "c", "o")).toThrow(/table/);
+    expect(() => aad("t", "c:1", "x")).toThrow(/column/);
+    expect(() => aad("t:x", "c", "o")).toThrow(/table/);
+    expect(() => aad("", "c", "o")).toThrow(/table/);
+    expect(() => aad("t", "", "o")).toThrow(/column/);
+    expect(aad("a", "b.c", "o")).toBe("a.b.c:o");
+    expect(aad("t", "c", "1:x")).toBe("t.c:1:x");
   });
 });
 

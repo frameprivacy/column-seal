@@ -54,8 +54,17 @@ export interface Seal {
  *
  * Binding a ciphertext to where it lives means a value copied into another row, column, or user's record fails to
  * decrypt instead of silently leaking.
+ *
+ * `table` and `column` must be non-empty; `table` may not contain `.` or `:` and `column` may not contain `:`. That
+ * keeps the string unambiguous: it maps back to exactly one (table, column, owner). `owner` may contain anything.
+ *
+ * @throws If `table` or `column` is empty or contains a separator.
  */
-export const aad = (table: string, column: string, owner: string): string => `${table}.${column}:${owner}`;
+export const aad = (table: string, column: string, owner: string): string => {
+  if (!table || /[.:]/.test(table)) throw new Error("aad: table must be non-empty and contain no '.' or ':'");
+  if (!column || column.includes(":")) throw new Error("aad: column must be non-empty and contain no ':'");
+  return `${table}.${column}:${owner}`;
+};
 
 /**
  * Reads the key version from an envelope header without decrypting it.

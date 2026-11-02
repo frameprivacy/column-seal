@@ -128,7 +128,7 @@ const candidates = seal.lookupHashes("contacts:email", key); // active version f
 
 | Function                                                  | Description                                                                                                                                 |
 | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `aad(table, column, owner)`                               | `"<table>.<column>:<owner>"`.                                                                                                               |
+| `aad(table, column, owner)`                               | `"<table>.<column>:<owner>"`. Throws if `table` is empty or has `.`/`:`, or `column` is empty or has `:`, so contexts never collide.        |
 | `keyVersionOf(envelope)`                                  | Reads the key version from the header without decrypting.                                                                                   |
 | `normalizeIdentifier(kind, raw, options?)`                | Canonical form for `email`, `phone`, `username`, `domain`, `name`, `address`, `birthdate`. Override `phone` / `domain` rules via `options`. |
 | `lookupKey(kind, normalized)`                             | Folds case for free-text kinds before hashing.                                                                                              |
