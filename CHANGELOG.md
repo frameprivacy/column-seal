@@ -13,3 +13,5 @@ ciphertext written by an earlier version still decrypts.
   `ReadonlyMap` type (#4).
 - `createSeal` validates both keyrings (including hand-built ones) and keeps a private copy of the keys, so a bad
   keyring fails at construction and later changes to the input keyring have no effect (#4).
+- Key bytes are copied into dedicated allocations instead of Node's shared `Buffer` pool, and the temporary decoded
+  from a base64 string is wiped (#5).
