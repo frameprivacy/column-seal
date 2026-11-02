@@ -238,6 +238,16 @@ describe("keyrings", () => {
     expect(() => parseKeyring(`1:${b64}junk`, "1", "APP_ENC_KEYS")).toThrow(/APP_ENC_KEYS: key 1 must be 32 bytes/);
   });
 
+  it("rejects non-canonical or duplicate object keys instead of silently overwriting (#7)", () => {
+    for (const v of ["01", "1.0", " 1", "1e3", "-1", "0x1"]) {
+      const keys: Record<string, Buffer> = { [v]: k1 };
+      expect(() => createKeyring({ keys, active: 1 })).toThrow(/integer from 1 to 65535/);
+    }
+    const aliased: Record<string, Buffer> = { 1: k1, "01": k2 };
+    expect(() => createKeyring({ keys: aliased, active: 1 })).toThrow(/integer from 1 to 65535/);
+    expect(createKeyring({ keys: { "7": k1, 1000: k2 }, active: 7 }).keys.size).toBe(2);
+  });
+
   it("validates sizes, versions and the active key", () => {
     expect(() => createKeyring({ keys: { 1: randomBytes(16) }, active: 1, name: "APP_KEYS" })).toThrow(
       "APP_KEYS: key 1 must be 32 bytes",

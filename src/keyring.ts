@@ -101,10 +101,12 @@ export function createKeyring(options: KeyringOptions): Keyring {
   const entries: [number, KeyMaterial][] =
     options.keys instanceof Map
       ? [...(options.keys as ReadonlyMap<number, KeyMaterial>)]
-      : Object.entries(options.keys as Readonly<Record<number, KeyMaterial>>).map(([v, k]): [number, KeyMaterial] => [
-          Number(v),
-          k,
-        ]);
+      : Object.entries(options.keys as Readonly<Record<number, KeyMaterial>>).map(([v, k]): [number, KeyMaterial] => {
+          // Only canonical decimal property names: "01", "1.0" or " 1" would otherwise alias version 1 and silently
+          // replace its key. With canonical names, two entries can never map to the same version.
+          if (!/^[1-9][0-9]*$/.test(v)) throw new Error(`${name}: key version must be an integer from 1 to 65535`);
+          return [Number(v), k];
+        });
   if (entries.length === 0) throw new Error(`${name}: at least one key is required`);
   const keys = new Map<number, Buffer>();
   for (const [version, material] of entries) {
