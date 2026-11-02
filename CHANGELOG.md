@@ -19,6 +19,11 @@ ciphertext written by an earlier version still decrypts.
   used to alias another version and silently drop a key (#7).
 - `lookupHash` and `lookupHashes` throw for an empty domain or a domain containing NUL, which could make two different
   (domain, value) pairs hash the same (#8). Hashes for valid domains are unchanged.
+- Strings with lone surrogates now throw a `TypeError` in `encrypt`, `aad`, AAD contexts and `lookupHash`. They used
+  to be silently replaced with U+FFFD, so the value changed on decrypt and different strings could bind or hash the
+  same (#9).
+- `decrypt` decodes strictly and throws when the plaintext is not valid UTF-8 (for example bytes written with
+  `encrypt(bytes)`), instead of returning replacement characters. `decryptBytes` is unchanged (#9).
 
 ### Changed
 

@@ -6,6 +6,18 @@ export const FORMAT_VERSION = 0x01;
 const IV_LEN = 12;
 const TAG_LEN = 16;
 const HEADER = 3;
+const strictUtf8 = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
+
+/**
+ * UTF-8 bytes of a string, refusing strings with lone surrogates. `Buffer.from` would silently replace them with
+ * U+FFFD, so different strings would encrypt, bind or hash as the same bytes.
+ */
+function utf8(value: string, what: string): Buffer {
+  if (!(value as string & { isWellFormed(): boolean }).isWellFormed()) {
+    throw new TypeError(`${what} is not well-formed Unicode (lone surrogate)`);
+  }
+  return Buffer.from(value, "utf8");
+}
 /** Smallest possible envelope: header + IV + tag, with an empty ciphertext. */
 export const MIN_ENVELOPE_BYTES = HEADER + IV_LEN + TAG_LEN;
 
@@ -23,9 +35,12 @@ export interface Seal {
   readonly activeKeyVersion: number;
   /** Version new lookup hashes use, or `undefined` without an HMAC keyring. */
   readonly activeHmacVersion: number | undefined;
-  /** Encrypts a string (UTF-8) or bytes into a self-describing envelope. */
+  /** Encrypts a string (UTF-8) or bytes into a self-describing envelope. Strings with lone surrogates throw. */
   encrypt(plaintext: string | Uint8Array, aad: string): Buffer;
-  /** Decrypts an envelope to a UTF-8 string. Throws if the key is unknown, the AAD differs, or the data was altered. */
+  /**
+   * Decrypts an envelope to a UTF-8 string. Throws if the key is unknown, the AAD differs, the data was altered, or the
+   * plaintext is not valid UTF-8 (use {@link Seal.decryptBytes} for binary data).
+   */
   decrypt(envelope: Uint8Array, aad: string): string;
   /** Decrypts an envelope to raw bytes. */
   decryptBytes(envelope: Uint8Array, aad: string): Buffer;
@@ -63,6 +78,7 @@ export interface Seal {
  * @throws If `table` or `column` is empty or contains a separator.
  */
 export const aad = (table: string, column: string, owner: string): string => {
+  for (const part of [table, column, owner]) utf8(part, "aad");
   if (!table || /[.:]/.test(table)) throw new Error("aad: table must be non-empty and contain no '.' or ':'");
   if (!column || column.includes(":")) throw new Error("aad: column must be non-empty and contain no ':'");
   return `${table}.${column}:${owner}`;
@@ -117,8 +133,8 @@ export function createSeal(options: SealOptions): Seal {
     const key = keyFor(encryption, encryption.active, "encryption");
     const iv = randomBytes(IV_LEN);
     const cipher = createCipheriv("aes-256-gcm", key, iv);
-    cipher.setAAD(Buffer.from(context, "utf8"));
-    const data = typeof plaintext === "string" ? Buffer.from(plaintext, "utf8") : plaintext;
+    cipher.setAAD(utf8(context, "aad"));
+    const data = typeof plaintext === "string" ? utf8(plaintext, "plaintext") : plaintext;
     const body = Buffer.concat([cipher.update(data), cipher.final()]);
     const header = Buffer.alloc(HEADER);
     header.writeUInt8(FORMAT_VERSION, 0);
@@ -131,19 +147,31 @@ export function createSeal(options: SealOptions): Seal {
     const iv = envelope.subarray(HEADER, HEADER + IV_LEN);
     const tag = envelope.subarray(HEADER + IV_LEN, MIN_ENVELOPE_BYTES);
     const decipher = createDecipheriv("aes-256-gcm", key, iv, { authTagLength: TAG_LEN });
-    decipher.setAAD(Buffer.from(context, "utf8"));
+    decipher.setAAD(utf8(context, "aad"));
     decipher.setAuthTag(tag);
     return Buffer.concat([decipher.update(envelope.subarray(MIN_ENVELOPE_BYTES)), decipher.final()]);
   };
 
-  const decrypt = (envelope: Uint8Array, context: string): string => decryptBytes(envelope, context).toString("utf8");
+  // Fatal decoding: bytes that are not valid UTF-8 throw instead of turning into U+FFFD.
+  const decrypt = (envelope: Uint8Array, context: string): string => {
+    try {
+      return strictUtf8.decode(decryptBytes(envelope, context));
+    } catch (error) {
+      if (error instanceof TypeError && (error as { code?: unknown }).code === "ERR_ENCODING_INVALID_ENCODED_DATA") {
+        throw new TypeError("decrypt: plaintext is not valid UTF-8; use decryptBytes", { cause: error });
+      }
+      throw error;
+    }
+  };
 
   const lookupHash = (domain: string, value: string, version?: number): Buffer => {
     // The NUL separator only keeps (domain, value) pairs apart if the domain itself has no NUL.
     if (!domain || domain.includes("\u0000")) throw new Error("lookup domain must be non-empty and contain no NUL");
     const ring = macRing();
     const key = keyFor(ring, version ?? ring.active, "hmac");
-    return createHmac("sha256", key).update(`${domain}\u0000${value}`, "utf8").digest();
+    return createHmac("sha256", key)
+      .update(utf8(`${domain}\u0000${value}`, "lookup domain or value"))
+      .digest();
   };
 
   const needsRotation = (envelope: Uint8Array): boolean => keyVersionOf(envelope) !== encryption.active;

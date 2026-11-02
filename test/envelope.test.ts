@@ -42,6 +42,22 @@ describe("encrypt / decrypt", () => {
     }
   });
 
+  it("refuses strings that are not well-formed Unicode instead of altering them (#9)", () => {
+    // used to decrypt as "\uFFFD", and "\uD800" / "\uDBFF" encoded to the same bytes
+    expect(() => seal.encrypt("\uD83D", ctx)).toThrow(/plaintext is not well-formed/);
+    expect(() => seal.encrypt("x", "ctx\uDC00")).toThrow(/aad is not well-formed/);
+    expect(() => seal.decrypt(seal.encrypt("x", ctx), "ctx\uD800")).toThrow(/aad is not well-formed/);
+    expect(() => aad("t", "c", "user\uD800")).toThrow(/aad is not well-formed/);
+    expect(seal.decrypt(seal.encrypt("\uFEFFbom 🔐", ctx), ctx)).toBe("\uFEFFbom 🔐");
+  });
+
+  it("decrypt refuses non-UTF-8 plaintext; decryptBytes still returns it (#9)", () => {
+    const blob = seal.encrypt(Buffer.from([0xff, 0xfe, 0x00]), ctx);
+    expect(() => seal.decrypt(blob, ctx)).toThrow(/not valid UTF-8; use decryptBytes/);
+    expect(seal.decryptBytes(blob, ctx).equals(Buffer.from([0xff, 0xfe, 0x00]))).toBe(true);
+    expect(() => seal.decrypt(blob, "other")).toThrow(/authenticate/);
+  });
+
   it("round-trips bytes and JSON", () => {
     const bytes = randomBytes(64);
     expect(seal.decryptBytes(seal.encrypt(bytes, ctx), ctx).equals(bytes)).toBe(true);
@@ -162,6 +178,11 @@ describe("lookup hashes (blind index)", () => {
     expect(() => seal.lookupHash("", "c")).toThrow(/non-empty/);
     expect(() => seal.lookupHashes("x\u0000", "c")).toThrow(/no NUL/);
     expect(seal.lookupHash("a", "b\u0000c")).toHaveLength(32);
+  });
+
+  it("refuses lookup values that are not well-formed Unicode (#9)", () => {
+    expect(() => seal.lookupHash("d", "\uD800")).toThrow(/not well-formed/);
+    expect(() => seal.lookupHash("d\uDBFF", "v")).toThrow(/not well-formed/);
   });
 
   it("depends on the key", () => {
