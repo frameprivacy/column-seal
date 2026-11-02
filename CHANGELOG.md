@@ -32,6 +32,9 @@ ciphertext written by an earlier version still decrypts.
 - `domainHostname` rejects schemes other than http(s) (`ftp://example.com` used to return `"ftp"`), drops one trailing
   dot so `example.com.` matches `example.com`, and turns URL parse failures into `Error("not a domain")` without the
   raw input that Node's `ERR_INVALID_URL` carried (#13).
+- `maskIdentifier` no longer reveals short phone values: phones not in `+1` + 10-digit form show only the last 2 digits
+  (`"+•••-••58"`), or none below 7 digits. Text hints are cut by code point, so an emoji is never split into a lone
+  surrogate. Output for `+1` numbers and ASCII text is unchanged (#14).
 
 ### Changed
 
