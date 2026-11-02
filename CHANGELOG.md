@@ -3,7 +3,9 @@
 All notable changes to this project are documented here. The envelope format is unchanged (`0x01`): every
 ciphertext written by an earlier version still decrypts.
 
-## Unreleased
+## 0.2.0 - 2026-11-02
+
+First release on npm as `@frame-labs/column-seal`.
 
 ### Fixed
 

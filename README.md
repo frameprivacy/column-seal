@@ -33,7 +33,7 @@ key, secret manager) when you build the keyring.
 ## Install
 
 ```sh
-npm install column-seal
+npm install @frame-labs/column-seal
 ```
 
 Requires Node.js 22 or newer. ESM only.
@@ -41,7 +41,7 @@ Requires Node.js 22 or newer. ESM only.
 ## Usage
 
 ```ts
-import { aad, createKeyring, createSeal, lookupKey, maskIdentifier, normalizeIdentifier } from "column-seal";
+import { aad, createKeyring, createSeal, lookupKey, maskIdentifier, normalizeIdentifier } from "@frame-labs/column-seal";
 
 // Keys come from your environment or KMS as base64-encoded 32-byte values.
 const seal = createSeal({
@@ -69,7 +69,7 @@ const hash = seal.lookupHash("contacts:email", lookupKey("email", normalizeIdent
 ### Reading keys from environment variables
 
 ```ts
-import { parseKeyring } from "column-seal";
+import { parseKeyring } from "@frame-labs/column-seal";
 
 // APP_ENC_KEYS="1:<base64>,2:<base64>"  APP_ENC_ACTIVE_KEY="2"
 const encryption = parseKeyring(process.env.APP_ENC_KEYS, process.env.APP_ENC_ACTIVE_KEY, "APP_ENC_KEYS");
