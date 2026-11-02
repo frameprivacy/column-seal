@@ -15,6 +15,8 @@ ciphertext written by an earlier version still decrypts.
   keyring fails at construction and later changes to the input keyring have no effect (#4).
 - Key bytes are copied into dedicated allocations instead of Node's shared `Buffer` pool, and the temporary decoded
   from a base64 string is wiped (#5).
+- `createKeyring` rejects object keys that are not canonical decimal integers (`"01"`, `"1.0"`, `" 1"`, `"1e3"`), which
+  used to alias another version and silently drop a key (#7).
 
 ### Changed
 
