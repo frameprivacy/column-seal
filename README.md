@@ -105,10 +105,10 @@ const candidates = seal.lookupHashes("contacts:email", key); // active version f
 
 ### Keyrings
 
-| Function                                 | Description                                                                                                                          |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `createKeyring({ keys, active, name? })` | Validates and freezes a keyring. `keys` is an object or `Map` of version (1–65535) to base64 string or bytes; each must be 32 bytes. |
-| `parseKeyring(list, active, name?)`      | Parses `"1:<base64>,2:<base64>"` plus an active version string, e.g. from `process.env`.                                             |
+| Function                                 | Description                                                                                                                                                                           |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `createKeyring({ keys, active, name? })` | Validates and freezes a keyring. `keys` is an object or `Map` of version (1–65535) to base64 string or bytes; each must be 32 bytes (strings: canonical padded base64, nothing else). |
+| `parseKeyring(list, active, name?)`      | Parses `"1:<base64>,2:<base64>"` plus an active version string, e.g. from `process.env`.                                                                                              |
 
 ### `createSeal({ encryption, hmac? })` → `Seal`
 
