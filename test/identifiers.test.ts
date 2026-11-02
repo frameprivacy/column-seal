@@ -44,6 +44,24 @@ describe("normalizeIdentifier", () => {
     expect(() => domainHostname("exa mple.com")).toThrow("not a domain");
   });
 
+  it("handles other schemes, trailing dots and unparsable hosts (#13)", () => {
+    expect(() => domainHostname("ftp://example.com")).toThrow("not a domain"); // used to return "ftp"
+    expect(() => domainHostname("git+ssh://example.com")).toThrow("not a domain");
+    expect(domainHostname("example.com.")).toBe("example.com");
+    expect(domainHostname("https://Example.com./x")).toBe("example.com");
+    expect(domainHostname("example.com:8080/a")).toBe("example.com");
+    for (const bad of ["mailto:foo", "javascript:alert(1)", "http://", ".", "exa%mple.com"]) {
+      let error: unknown;
+      try {
+        domainHostname(bad);
+      } catch (e) {
+        error = e;
+      }
+      expect(String(error)).toBe("Error: not a domain");
+      expect((error as { input?: unknown }).input).toBeUndefined();
+    }
+  });
+
   it("collapses whitespace in free text but keeps case for display", () => {
     expect(normalizeIdentifier("name", "  Ada   Lovelace ")).toBe("Ada Lovelace");
     expect(normalizeIdentifier("address", "1 Main\tSt")).toBe("1 Main St");
