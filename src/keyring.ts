@@ -22,20 +22,39 @@ export interface KeyringOptions {
 const KEY_BYTES = 32;
 const MAX_VERSION = 0xffff;
 
+/** A `Map` that refuses `set`, `delete` and `clear` once built, so the runtime matches the `ReadonlyMap` type. */
+class ReadonlyKeyMap extends Map<number, Buffer> {
+  constructor(entries: Iterable<readonly [number, Buffer]>) {
+    super();
+    for (const [version, key] of entries) super.set(version, key);
+  }
+  override set(): this {
+    throw new TypeError("keyring is read-only");
+  }
+  override delete(): boolean {
+    throw new TypeError("keyring is read-only");
+  }
+  override clear(): void {
+    throw new TypeError("keyring is read-only");
+  }
+}
+
 function toKey(material: KeyMaterial, version: number, name: string): Buffer {
   const key = typeof material === "string" ? Buffer.from(material, "base64") : Buffer.from(material);
   if (key.length !== KEY_BYTES) throw new Error(`${name}: key ${String(version)} must be ${String(KEY_BYTES)} bytes`);
   return key;
 }
 
-function checkVersion(version: number, name: string): void {
-  if (!Number.isInteger(version) || version < 1 || version > MAX_VERSION) {
+function checkVersion(version: unknown, name: string): number {
+  if (typeof version !== "number" || !Number.isInteger(version) || version < 1 || version > MAX_VERSION) {
     throw new Error(`${name}: key version must be an integer from 1 to ${String(MAX_VERSION)}`);
   }
+  return version;
 }
 
 /**
  * Builds an immutable keyring and validates it up front, so a bad key fails at boot rather than on the first write.
+ * The returned `keys` map throws on `set`, `delete` and `clear`.
  *
  * Keys are always supplied by the caller (environment, KMS, secret manager); this library never stores or generates
  * long-lived keys.
@@ -59,7 +78,31 @@ export function createKeyring(options: KeyringOptions): Keyring {
     keys.set(version, toKey(material, version, name));
   }
   if (!keys.has(options.active)) throw new Error(`${name}: active key ${String(options.active)} is not in the keyring`);
-  return Object.freeze({ active: options.active, keys });
+  return Object.freeze({ active: options.active, keys: new ReadonlyKeyMap(keys) });
+}
+
+/**
+ * Validates any object shaped like a {@link Keyring} (including hand-built ones) and returns a private copy, so later
+ * changes to the input cannot affect the caller. Used by `createSeal`.
+ *
+ * @internal
+ */
+export function snapshotKeyring(ring: Keyring, name: string): Keyring {
+  // Checked as `unknown`: the input may come from plain JavaScript or a hand-built object.
+  const input: unknown = ring;
+  if (typeof input !== "object" || input === null) throw new Error(`${name}: not a keyring`);
+  const { active, keys: source } = input as { active?: unknown; keys?: unknown };
+  if (!(source instanceof Map)) throw new Error(`${name}: not a keyring`);
+  const keys = new Map<number, Buffer>();
+  for (const [version, key] of source as Map<unknown, unknown>) {
+    const v = checkVersion(version, name);
+    if (!(key instanceof Uint8Array)) throw new Error(`${name}: key ${String(v)} must be bytes`);
+    keys.set(v, toKey(key, v, name));
+  }
+  if (keys.size === 0) throw new Error(`${name}: at least one key is required`);
+  const a = checkVersion(active, name);
+  if (!keys.has(a)) throw new Error(`${name}: active key ${String(a)} is not in the keyring`);
+  return Object.freeze({ active: a, keys: new ReadonlyKeyMap(keys) });
 }
 
 /**

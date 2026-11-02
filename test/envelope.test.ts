@@ -1,6 +1,14 @@
 import { createHmac, randomBytes } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { aad, createKeyring, createSeal, keyVersionOf, MIN_ENVELOPE_BYTES, parseKeyring } from "../src/index.js";
+import {
+  aad,
+  createKeyring,
+  createSeal,
+  keyVersionOf,
+  MIN_ENVELOPE_BYTES,
+  parseKeyring,
+  type Keyring,
+} from "../src/index.js";
 
 const key = () => randomBytes(32);
 const k1 = key();
@@ -195,6 +203,50 @@ describe("keyrings", () => {
     expect(() => createKeyring({ keys: { 65536: k1 }, active: 65536 })).toThrow(/integer from 1 to 65535/);
     expect(() => createKeyring({ keys: { 1: k1 }, active: 2 })).toThrow(/active key 2 is not in the keyring/);
     expect(() => createKeyring({ keys: {}, active: 1 })).toThrow(/at least one key/);
+  });
+
+  it("is read-only at runtime, matching its ReadonlyMap type (#4)", () => {
+    const ring = createKeyring({ keys: { 1: k1 }, active: 1 });
+    const map = ring.keys as Map<number, Buffer>;
+    expect(map).toBeInstanceOf(Map);
+    expect(() => map.set(1, k2)).toThrow(/read-only/);
+    expect(() => map.delete(1)).toThrow(/read-only/);
+    expect(() => {
+      map.clear();
+    }).toThrow(/read-only/);
+    expect(ring.keys.get(1)?.equals(k1)).toBe(true);
+    expect(Object.isFrozen(ring)).toBe(true);
+  });
+
+  it("createSeal copies keys, so later changes to the input do not affect it (#4)", () => {
+    const ring = createKeyring({ keys: { 1: k1 }, active: 1 });
+    const seal = createSeal({ encryption: ring, hmac: ring });
+    const blob = seal.encrypt("kept", ctx);
+    const hash = seal.lookupHash("d", "v");
+    ring.keys.get(1)?.fill(0);
+    expect(seal.decrypt(blob, ctx)).toBe("kept");
+    expect(seal.lookupHash("d", "v").equals(hash)).toBe(true);
+    ring.keys.get(1)?.set(k1);
+  });
+
+  it("createSeal validates hand-built keyrings up front (#4)", () => {
+    const hand = (active: number, keys: Map<number, unknown>) => ({ active, keys }) as unknown as Keyring;
+    expect(() => createSeal({ encryption: hand(70000, new Map([[70000, k1]])) })).toThrow(
+      /encryption keyring: key version must be an integer/,
+    );
+    expect(() => createSeal({ encryption: hand(1, new Map([[1, randomBytes(16)]])) })).toThrow(
+      "encryption keyring: key 1 must be 32 bytes",
+    );
+    expect(() => createSeal({ encryption: hand(2, new Map([[1, k1]])) })).toThrow(/active key 2 is not in the keyring/);
+    expect(() => createSeal({ encryption: hand(1, new Map()) })).toThrow(/at least one key/);
+    expect(() => createSeal({ encryption: hand(1, new Map([[1, "not bytes"]])) })).toThrow(/key 1 must be bytes/);
+    expect(() => createSeal({ encryption: { active: 1, keys: {} } as unknown as Keyring })).toThrow(/not a keyring/);
+    expect(() => createSeal({ encryption: null as unknown as Keyring })).toThrow(/not a keyring/);
+    const ok = createSeal({
+      encryption: createKeyring({ keys: { 1: k1 }, active: 1 }),
+      hmac: hand(1, new Map([[1, k2]])),
+    });
+    expect(ok.activeHmacVersion).toBe(1);
   });
 
   it("parses the env-var form", () => {

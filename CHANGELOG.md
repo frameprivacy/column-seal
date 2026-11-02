@@ -9,3 +9,7 @@ ciphertext written by an earlier version still decrypts.
 
 - `aad()` now throws for an empty table or column, a table containing `.` or `:`, or a column containing `:`. Those
   inputs could produce the same context string for different locations (#3). Output for valid names is unchanged.
+- Keyrings are now read-only at runtime: `keys.set`, `keys.delete` and `keys.clear` throw, matching the
+  `ReadonlyMap` type (#4).
+- `createSeal` validates both keyrings (including hand-built ones) and keeps a private copy of the keys, so a bad
+  keyring fails at construction and later changes to the input keyring have no effect (#4).
