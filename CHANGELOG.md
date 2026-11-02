@@ -17,6 +17,8 @@ ciphertext written by an earlier version still decrypts.
   from a base64 string is wiped (#5).
 - `createKeyring` rejects object keys that are not canonical decimal integers (`"01"`, `"1.0"`, `" 1"`, `"1e3"`), which
   used to alias another version and silently drop a key (#7).
+- `lookupHash` and `lookupHashes` throw for an empty domain or a domain containing NUL, which could make two different
+  (domain, value) pairs hash the same (#8). Hashes for valid domains are unchanged.
 
 ### Changed
 
