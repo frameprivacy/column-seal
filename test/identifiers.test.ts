@@ -96,6 +96,23 @@ describe("maskIdentifier", () => {
   ] as const)("%s %s → %s", (kind, value, masked) => {
     expect(maskIdentifier(kind, value)).toBe(masked);
   });
+
+  it.each([
+    // short or non-NANP phones used to show every digit or a wrong country code (#14)
+    ["phone", "+44123", "+•••"],
+    ["phone", "+442079460958", "+•••-••58"],
+    ["phone", "+1555", "+•••"],
+    ["phone", "tel:0207946095", "•••-••95"],
+    // code points, not UTF-16 units: no lone surrogates in hints (#14)
+    ["name", "😀mma Lovelace", "😀• L•"],
+    ["email", "🔐x@work.co", "🔐•••@work.co"],
+    ["username", "😀😀cat", "😀😀•••"],
+    ["address", "🏠🏠🏠 Main", "🏠🏠🏠•••"],
+  ] as const)("%s %s → %s", (kind, value, masked) => {
+    const hint = maskIdentifier(kind, value);
+    expect(hint).toBe(masked);
+    expect((hint as string & { isWellFormed(): boolean }).isWellFormed()).toBe(true);
+  });
 });
 
 describe("tokens", () => {

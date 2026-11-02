@@ -94,30 +94,45 @@ export function normalizeIdentifier(kind: IdentifierKind, raw: string, options: 
 export const lookupKey = (kind: IdentifierKind, normalized: string): string =>
   kind === "name" || kind === "address" ? normalized.toLowerCase() : normalized;
 
+/** The first `count` characters, counted in code points so emoji and other astral characters are never split. */
+const head = (value: string, count: number): string => Array.from(value).slice(0, count).join("");
+
+/** Fewer digits than this and a phone hint shows none of them. */
+const MIN_PHONE_DIGITS_SHOWN = 7;
+
 /**
  * A display hint that reveals just enough to recognize the value without decrypting it,
  * e.g. `"a•••@work.co"` or `"+1 (604) •••-••12"`. Pass the normalized value.
+ *
+ * Phones in `+1` + 10-digit form keep the NANP layout; other phones show only the last 2 digits (`"+•••-••58"`), and
+ * none at all when there are fewer than 7 digits.
  */
 export function maskIdentifier(kind: IdentifierKind, normalized: string): string {
   switch (kind) {
     case "email": {
       const at = normalized.lastIndexOf("@");
-      if (at < 0) return `${normalized.slice(0, 1)}•••`;
-      return `${normalized.slice(0, 1)}•••@${normalized.slice(at + 1)}`;
+      if (at < 0) return `${head(normalized, 1)}•••`;
+      return `${head(normalized, 1)}•••@${normalized.slice(at + 1)}`;
     }
-    case "phone":
-      return `${normalized.slice(0, 2)} (${normalized.slice(2, 5)}) •••-••${normalized.slice(-2)}`;
+    case "phone": {
+      if (/^\+1\d{10}$/.test(normalized)) {
+        return `${normalized.slice(0, 2)} (${normalized.slice(2, 5)}) •••-••${normalized.slice(-2)}`;
+      }
+      const plus = normalized.startsWith("+") ? "+" : "";
+      const digits = normalized.replace(/\D/g, "");
+      return digits.length < MIN_PHONE_DIGITS_SHOWN ? `${plus}•••` : `${plus}•••-••${digits.slice(-2)}`;
+    }
     case "username":
-      return `${normalized.slice(0, 2)}•••`;
+      return `${head(normalized, 2)}•••`;
     case "domain":
       return normalized;
     case "name":
       return normalized
         .split(" ")
-        .map((w) => `${w.slice(0, 1)}•`)
+        .map((w) => `${head(w, 1)}•`)
         .join(" ");
     case "address":
-      return `${normalized.slice(0, 3)}•••`;
+      return `${head(normalized, 3)}•••`;
     case "birthdate":
       return `${normalized.slice(0, 4)}-••-••`;
   }
