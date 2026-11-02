@@ -13,11 +13,15 @@ export interface NormalizeOptions {
  * A small, dependency-free phone canonicalizer: keeps digits, keeps an explicit `+` country code, and assumes `+1` for
  * 10-digit (or `1`-prefixed 11-digit) numbers. Swap in libphonenumber via {@link NormalizeOptions.phone} if you need
  * real international parsing.
+ *
+ * @throws If the input contains no digits.
  */
 export function canonicalPhone(raw: string): string {
   const trimmed = raw.trim();
   const digits = trimmed.replace(/\D/g, "");
-  if (trimmed.startsWith("+")) return digits ? `+${digits}` : trimmed;
+  // Without this, "", "abc" and "+" all became the same value and so the same lookup hash.
+  if (!digits) throw new Error("not a phone number");
+  if (trimmed.startsWith("+")) return `+${digits}`;
   if (digits.length === 10) return `+1${digits}`;
   if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
   if (digits.length > 11) return `+${digits}`;
